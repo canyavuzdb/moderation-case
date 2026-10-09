@@ -62,6 +62,25 @@ export function openStore(path = process.env.MODERATION_DB_PATH || resolve("data
         db.prepare("UPDATE comments SET decision = ?, note = ?, decided_at = ? WHERE id = ?")
           .run(decision, note, decidedAt, id);
   }
+  function bulkDecide(ids: unknown, decision: unknown) {
+    if (!Array.isArray(ids) || ids.length === 0 || ids.length > 100 ||
+      ids.some(id => typeof id !== "string" || !id || id.length > 100) || new Set(ids).size !== ids.length)
+      throw new ValidationError("1–100 farklı yorum seçin.");
+    if (decision !== "approved" && decision !== "rejected") throw new ValidationError("Geçerli bir karar seçin.");
+    const outcome = decision === "approved" ? "appropriate" : "inappropriate";
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const id of ids) {
+        const comment = get(id);
+        if (!comment || comment.decision || comment.assessment.outcome !== outcome)
+          throw new ValidationError("Seçimdeki bir yorum artık bu toplu işleme uygun değil. Hiçbir karar değiştirilmedi; listeyi yenileyin.", 409);
+      }
+      for (const id of ids) writeDecision(id, decision, "Sistem önerisiyle uyumlu toplu " + (decision === "approved" ? "onay" : "ret") + " işlemi.");
+      const updated = ids.map(id => get(id)!);
+      db.exec("COMMIT");
+      return updated;
+    } catch (error) { db.exec("ROLLBACK"); throw error; }
+  }
   function decide(id: string, decision: unknown, input: unknown = "") {
     if (decision !== "approved" && decision !== "rejected") throw new ValidationError("Geçerli bir karar seçin.");
     if (typeof input !== "string" || input.length > 500) throw new ValidationError("Açıklama en fazla 500 karakter olabilir.");
@@ -81,7 +100,7 @@ export function openStore(path = process.env.MODERATION_DB_PATH || resolve("data
       return result;
     } catch (error) { db.exec("ROLLBACK"); throw error; }
   }
-  return { list, get, create, decide, close: () => db.close() };
+  return { list, get, create, decide, bulkDecide, close: () => db.close() };
 }
 export function withStore<T>(action: (store: ReturnType<typeof openStore>) => T): T {
   const store = openStore();
