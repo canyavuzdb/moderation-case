@@ -1,0 +1,42 @@
+{
+  "tables": {
+    "comments": {
+      "id": "Yorum için sunucuda üretilen UUID.",
+      "text": "Girilen yorum metni; en fazla 2000 karakter.",
+      "created_at": "Yorumun kaydedilme zamanı; ISO 8601 UTC.",
+      "assessment": "İlk sistem değerlendirmesi; JSON metni olarak saklanır.",
+      "decision": "Güncel yönetici kararı: approved, rejected veya karar beklerken null.",
+      "note": "Güncel yönetici açıklaması; en fazla 500 karakter, açıklama yoksa boş metin.",
+      "decided_at": "Son kararın zamanı; ISO 8601 UTC, karar beklerken null.",
+      "seed_key": "Hazır örneklerin tekrar eklenmesini önleyen benzersiz anahtar; elle eklenenlerde null."
+    },
+    "decision_history": {
+      "id": "Otomatik artan karar geçmişi kayıt numarası.",
+      "comment_id": "İlgili yorumun UUID değeri; comments.id ilişkisi.",
+      "decision": "Bu geçmiş kaydındaki yönetici kararı: approved veya rejected.",
+      "note": "Bu kararla kaydedilen açıklama.",
+      "decided_at": "Bu kararın zamanı; ISO 8601 UTC.",
+      "legacy": "Eski kayıttan aktarılan başlangıç kararıysa 1, yeni geçmiş kaydıysa 0."
+    }
+  },
+  "assessment_json": {
+    "outcome": "appropriate (Uygun), review (İnsan incelemesi gerekli) veya inappropriate (Uygun değil).",
+    "findings": "Gerekçelerin listesi; her öğede rule (kural kimliği) ve reason (Türkçe açıklama) bulunur.",
+    "version": "Değerlendirmede kullanılan kural/politika sürümü.",
+    "source": "rules (yerel kurallar), ai (Gemini) veya fallback (model başarısız, yerel değerlendirme). Eski kayıtlarda olmayabilir.",
+    "model": "Model adı; yapay zekâ değerlendirmesinde isteğe bağlı.",
+    "failure": "Model başarısızlığında isteğe bağlı hata sınıfı: quota, authentication, unavailable veya invalid-response."
+  },
+  "relationships": [
+    "comments.id → decision_history.comment_id (bir yorum, birden çok karar kaydı)"
+  ],
+  "not_recorded": [
+    "Yorum yazarının adı veya kullanıcı kimliği",
+    "Karar veren yöneticinin kimliği",
+    "IP adresi veya cihaz bilgisi",
+    "API anahtarı",
+    "Video, görüntü veya ses",
+    "Modelin ham yanıtı ve token kullanım bilgisi"
+  ],
+  "external_processing": "Gemini etkinse yeni yorum metni ve sabit politika Google Gemini’ye gönderilir; yönetici açıklamaları gönderilmez."
+}

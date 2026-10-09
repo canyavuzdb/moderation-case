@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { evaluate } from "./moderation";
 import { needsExplanation, type Comment, type Assessment, type DecisionEvent } from "./types";
+import { examples } from "./examples";
 
 export class ValidationError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -100,7 +101,22 @@ export function openStore(path = process.env.MODERATION_DB_PATH || resolve("data
       return result;
     } catch (error) { db.exec("ROLLBACK"); throw error; }
   }
-  return { list, get, create, decide, bulkDecide, close: () => db.close() };
+  function seed() {
+    let added = 0;
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      examples.forEach((example, index) => {
+        const key = "demo-v3-" + index;
+        if (!db.prepare("SELECT id FROM comments WHERE seed_key = ?").get(key)) {
+          insert(example.text, key, new Date(Date.now() - index * 3 * 60_000).toISOString());
+          added++;
+        }
+      });
+      db.exec("COMMIT");
+      return added;
+    } catch (error) { db.exec("ROLLBACK"); throw error; }
+  }
+  return { list, get, create, decide, bulkDecide, seed, close: () => db.close() };
 }
 export function withStore<T>(action: (store: ReturnType<typeof openStore>) => T): T {
   const store = openStore();
